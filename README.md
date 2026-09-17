@@ -77,10 +77,34 @@ Open `http://localhost:5000`. Try a single pasted ticket, or run the
 
 ## Tech stack
 
-Python · Flask · Groq API (free-tier hosted Llama 3.1 — classification and
-reply drafting) · ChromaDB (local vector store) · `sentence-transformers`
-(local embedding model — no API cost for retrieval) · pandas (batch CSV
+Python · Flask · Groq API (free-tier hosted LLM — classification and reply
+drafting) · ChromaDB (local vector store) · `sentence-transformers` (local
+embedding model — no API cost for retrieval) · pandas (batch CSV
 processing)
+
+## Extending to a live channel (WhatsApp, email, etc.)
+
+The triage logic in `triage_core.py` is channel-agnostic — it takes a
+subject and body string and returns a classification plus a drafted reply,
+with no assumption about where that text came from. Connecting a live
+channel is a separate, well-scoped integration on top of this, not a
+change to the core logic:
+
+- **WhatsApp** would go through Meta's WhatsApp Business Cloud API (or a
+  provider like Twilio, which wraps it with an easier setup). This needs a
+  registered WhatsApp Business number and, for Meta's own API, a business
+  verification step that can take a few days — there's no way to connect to
+  a personal WhatsApp account directly.
+- Incoming messages would hit a new webhook route (e.g.
+  `/webhook/whatsapp`), which calls `triage_core.triage_one()` on the
+  message text exactly as the web app's `/api/triage-one` route does today.
+- The drafted reply would most realistically be queued for human approval
+  before sending, rather than auto-sent — the same "human stays in the
+  loop" principle already built into how this tool drafts rather than
+  finalizes replies.
+- The same pattern applies to a shared support inbox (Gmail/Outlook) via
+  their respective APIs, or a helpdesk tool's own webhook system (Zendesk,
+  Freshdesk) — the integration surface changes, the triage core doesn't.
 
 ## Note
 
